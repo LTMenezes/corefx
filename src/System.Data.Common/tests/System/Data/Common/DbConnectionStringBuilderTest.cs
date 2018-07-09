@@ -26,7 +26,10 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data.Common;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -1727,6 +1730,50 @@ namespace System.Data.Tests.Common
             string str = _builder.ToString();
             string value = _builder.ConnectionString;
             Assert.Equal(value, str);
+        }
+
+        [Fact]
+        public void GetPropertiesTest()
+        {
+            ICustomTypeDescriptor customTypeDescriptor = _builder;
+            PropertyDescriptorCollection propertyDescriptorCollection = customTypeDescriptor.GetProperties();
+            Assert.NotNull(propertyDescriptorCollection);
+        }
+
+        [Fact]
+        public void GetPropertiesByAttributesTest()
+        {
+            ICustomTypeDescriptor customTypeDescriptor = _builder;
+
+            // Test GetProperties with an empty Attribute array should return all properties.
+            Attribute[] attributes = new Attribute[] { };
+            Assert.Equal(customTypeDescriptor.GetProperties().Count, customTypeDescriptor.GetProperties(attributes).Count);
+
+            // Test GetProperties by trying to find a specific property by its attributes.
+            PropertyDescriptorCollection allPropertyDescriptorCollection = customTypeDescriptor.GetProperties();
+            bool doesAnyPropertyHaveAttributes = false;
+            List<Attribute> propertyAttributes = new List<Attribute>();
+            foreach (PropertyDescriptor property in allPropertyDescriptorCollection)
+            {
+                IEnumerable<Attribute> currentAttributes = property.Attributes.Cast<Attribute>();
+
+                if (currentAttributes.Any())
+                {
+                    propertyAttributes.AddRange(currentAttributes);
+                    doesAnyPropertyHaveAttributes = true;
+                    break;
+                }
+            }
+
+            PropertyDescriptorCollection propertyDescriptorCollection = customTypeDescriptor.GetProperties(propertyAttributes.ToArray());
+
+            Assert.NotNull(propertyDescriptorCollection);
+
+            // If any property have attributes we should be able to find it by GetProperties using its attributes.
+            if (doesAnyPropertyHaveAttributes)
+            {
+                Assert.NotEqual(0, propertyDescriptorCollection.Count);
+            }
         }
 
         [Fact]
